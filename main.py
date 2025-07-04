@@ -1,12 +1,15 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-import logging
 
-BOT_TOKEN = "7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o"
+import asyncio
+import logging
+import os
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+
+# Token do bot vindo da variável de ambiente (melhor prática para Render)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
 BASE_TEMAS = {
@@ -16,7 +19,7 @@ BASE_TEMAS = {
         "explicacao": "O texto mostra como o amor verdadeiro se comporta. Não é apenas um sentimento, mas uma escolha diária de agir com bondade e paciência.",
         "aplicacao": "Podemos aplicar esse texto sendo pacientes com os outros, mesmo quando estão errados.",
         "materia": "https://www.jw.org/pt/biblioteca/revistas/a-despertai-n1-2021-mar-abr/como-desenvolver-o-amor-verdadeiro/",
-        "fonte": "jw.org"
+        "fonte": "jw.org",
     },
     "esperança": {
         "versiculo": "Apocalipse 21:4",
@@ -24,9 +27,10 @@ BASE_TEMAS = {
         "explicacao": "Esse versículo mostra a promessa de Deus para um futuro sem sofrimento.",
         "aplicacao": "Mesmo em tempos difíceis, podemos manter a esperança de que Jeová cumprirá suas promessas.",
         "materia": "https://www.jw.org/pt/biblioteca/revistas/wp20150301/a-esperanca-que-a-biblia-oferece/",
-        "fonte": "jw.org"
-    }
+        "fonte": "jw.org",
+    },
 }
+
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mensagem = (
@@ -35,6 +39,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Vamos começar? 😊"
     )
     await update.message.reply_text(mensagem)
+
 
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pergunta = update.message.text.lower()
@@ -61,9 +66,16 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(resposta, parse_mode="Markdown")
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
-print("Bot rodando...")
-app.run_polling()
+async def main():
+    application = Application.builder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
+
+    print("Bot rodando...")
+    await application.run_polling()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
