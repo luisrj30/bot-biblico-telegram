@@ -1,12 +1,9 @@
-
-import asyncio
 import logging
 import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-# Token do bot vindo da variável de ambiente (melhor prática para Render)
-BOT_TOKEN = os.getenv("BOT_TOKEN")
+BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -33,12 +30,10 @@ BASE_TEMAS = {
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    mensagem = (
+    await update.message.reply_text(
         "Olá! 👋 Eu sou seu amigo bíblico.\n"
-        "Me faça qualquer pergunta sobre a Bíblia, e eu tentarei te ajudar com uma resposta baseada nas publicações das Testemunhas de Jeová.\n"
-        "Vamos começar? 😊"
+        "Me envie qualquer pergunta sobre a Bíblia e eu vou tentar te ajudar com base nas publicações das Testemunhas de Jeová."
     )
-    await update.message.reply_text(mensagem)
 
 
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -67,15 +62,16 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(resposta, parse_mode="Markdown")
 
 
-async def main():
+def main():
     application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
     print("Bot rodando...")
-    await application.run_polling()
+    application.run_polling()  # Agora rodando de forma síncrona segura
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
+
