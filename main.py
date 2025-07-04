@@ -1,9 +1,11 @@
 import logging
 import os
+from dotenv import load_dotenv  # Carrega variáveis do .env
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
+load_dotenv()  # Carrega o conteúdo do arquivo .env
+BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")  # Token agora vem da variável de ambiente
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -69,9 +71,8 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
     print("Bot rodando...")
-    application.run_polling()  # Agora rodando de forma síncrona segura
+    application.run_polling()  # Roda de forma síncrona
 
 
 if __name__ == "__main__":
     main()
-
