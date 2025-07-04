@@ -4,8 +4,8 @@ from dotenv import load_dotenv  # Carrega variáveis do .env
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-load_dotenv(7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o)  # Carrega o conteúdo do arquivo .env
-BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")  # Token agora vem da variável de ambiente
+load_dotenv()  # Carrega o conteúdo do arquivo .env
+BOT_TOKEN = os.getenv(7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o)  # Token agora vem da variável de ambiente
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
