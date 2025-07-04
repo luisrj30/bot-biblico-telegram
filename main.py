@@ -1,11 +1,18 @@
 import logging
 import os
-from dotenv import load_dotenv  # Carrega variáveis do .env
+from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 
-load_dotenv()  # Carrega o conteúdo do arquivo .env
-BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")  # Token agora vem da variável de ambiente
+# Carrega variáveis do arquivo .env (funciona localmente)
+load_dotenv()
+
+# Pega o token da variável de ambiente chamada BOT_TOKEN
+BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
+
+# Verifica se o token foi carregado corretamente
+if not BOT_TOKEN:
+    raise ValueError("A variável de ambiente BOT_TOKEN não foi definida!")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -71,7 +78,7 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
     print("Bot rodando...")
-    application.run_polling()  # Roda de forma síncrona
+    application.run_polling()
 
 
 if __name__ == "__main__":
