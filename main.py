@@ -1,23 +1,24 @@
 import logging
 import os
-from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
+from dotenv import load_dotenv
 
-# Carrega variáveis do arquivo .env (funciona localmente)
+# Carrega variáveis do arquivo .env (caso esteja rodando localmente)
 load_dotenv()
 
-# Pega o token da variável de ambiente chamada BOT_TOKEN
 BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
 
-# Verifica se o token foi carregado corretamente
 if not BOT_TOKEN:
-    raise ValueError("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
+    raise ValueError("A variável de ambiente BOT_TOKEN não foi definida!")
 
+# Configura o logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
 )
 
+# Banco de dados simples com temas bíblicos
 BASE_TEMAS = {
     "amor": {
         "versiculo": "1 Coríntios 13:4-7",
@@ -37,27 +38,29 @@ BASE_TEMAS = {
     },
 }
 
-
+# Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Olá! 👋 Eu sou seu amigo bíblico.\n"
         "Me envie qualquer pergunta sobre a Bíblia e eu vou tentar te ajudar com base nas publicações das Testemunhas de Jeová."
     )
 
-
+# Resposta automática baseada em temas
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pergunta = update.message.text.lower()
     resposta = ""
 
     for chave, dados in BASE_TEMAS.items():
         if chave in pergunta:
-            resposta = f"📖 *Versículo:* {dados['versiculo']}\n"
-            resposta += f"{dados['texto']}\n\n"
-            resposta += f"✨ *Explicação:* {dados['explicacao']}\n"
-            resposta += f"🧭 *Aplicação:* {dados['aplicacao']}\n\n"
-            resposta += f"📘 *Matéria recomendada:* {dados['materia']}\n"
-            resposta += f"📚 *Fonte:* {dados['fonte']}\n\n"
-            resposta += "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
+            resposta = (
+                f"📖 *Versículo:* {dados['versiculo']}\n"
+                f"{dados['texto']}\n\n"
+                f"✨ *Explicação:* {dados['explicacao']}\n"
+                f"🧭 *Aplicação:* {dados['aplicacao']}\n\n"
+                f"📘 *Matéria recomendada:* {dados['materia']}\n"
+                f"📚 *Fonte:* {dados['fonte']}\n\n"
+                "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
+            )
             break
 
     if not resposta:
@@ -70,16 +73,14 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(resposta, parse_mode="Markdown")
 
-
+# Inicializa o bot
 def main():
     application = Application.builder().token(BOT_TOKEN).build()
-
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
-
     print("Bot rodando...")
     application.run_polling()
 
-
 if __name__ == "__main__":
     main()
+
