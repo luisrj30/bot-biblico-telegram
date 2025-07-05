@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # Carrega variáveis do arquivo .env (caso esteja rodando localmente)
 load_dotenv()
 
-BOT_TOKEN = os.getenv("7855633786:AAHH0nTE2Rk4RJEuXf0i7LM7YO9q9V3KZ4o")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
     raise ValueError("A variável de ambiente BOT_TOKEN não foi definida!")
