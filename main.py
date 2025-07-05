@@ -1,5 +1,8 @@
 import logging
 import os
+import re
+import requests
+from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from dotenv import load_dotenv
@@ -18,7 +21,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# Banco de dados simples com temas bíblicos
+# Banco de dados com alguns temas bíblicos
 BASE_TEMAS = {
     "amor": {
         "versiculo": "1 Coríntios 13:4-7",
@@ -38,20 +41,65 @@ BASE_TEMAS = {
     },
 }
 
+# Busca versículo online no wol.jw.org
+def buscar_versiculo_online(referencia):
+    try:
+        partes = referencia.strip().split()
+        if len(partes) != 2 or ":" not in partes[1]:
+            return None
+
+        livro, cap_vers = partes
+        capitulo, versiculo = cap_vers.split(":")
+
+        # Monta URL (por exemplo: https://wol.jw.org/pt/wol/b/r5/lp-t/nwtsty/43/3#v=43:3:16)
+        # 43 = João, 3 = capítulo, 16 = versículo
+        mapa_livros = {
+            "joão": "43", "mateus": "40", "marcos": "41", "lucas": "42",
+            "atos": "44", "romanos": "45", "salmos": "19", "gênesis": "1",
+            # Adicione outros conforme necessário
+        }
+        livro_id = mapa_livros.get(livro.lower())
+        if not livro_id:
+            return None
+
+        url = f"https://wol.jw.org/pt/wol/b/r5/lp-t/nwtsty/{livro_id}/{capitulo}#v={livro_id}:{capitulo}:{versiculo}"
+        response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        versiculo_tag = soup.find("span", id=f"v{livro_id}:{capitulo}:{versiculo}")
+
+        if versiculo_tag:
+            texto = versiculo_tag.get_text(strip=True)
+            return f"📖 *{referencia}*: {texto}\n\nFonte: [wol.jw.org]({url})"
+        else:
+            return "Versículo não encontrado. Tente verificar a referência."
+    except Exception as e:
+        return f"Erro ao buscar versículo: {e}"
+
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Olá! 👋 Eu sou seu amigo bíblico.\n"
-        "Me envie qualquer pergunta sobre a Bíblia e eu vou tentar te ajudar com base nas publicações das Testemunhas de Jeová."
+        "Olá! 👋 Eu sou seu amigo bíblico.",
+    )
+    await update.message.reply_text(
+        "Você pode me enviar um versículo como `João 3:16` ou perguntar sobre um tema como `amor` ou `esperança`."
     )
 
-# Resposta automática baseada em temas
+# Resposta automática
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pergunta = update.message.text.lower()
+    pergunta = update.message.text.strip()
     resposta = ""
 
+    # Verifica se é referência tipo "João 3:16"
+    if re.match(r"^[A-Za-zçãáéíóú]+ \d+:\d+$", pergunta):
+        resposta = buscar_versiculo_online(pergunta)
+        await update.message.reply_text(resposta, parse_mode="Markdown")
+        return
+
+    # Verifica se é um tema conhecido
     for chave, dados in BASE_TEMAS.items():
-        if chave in pergunta:
+        if chave in pergunta.lower():
             resposta = (
                 f"📖 *Versículo:* {dados['versiculo']}\n"
                 f"{dados['texto']}\n\n"
@@ -61,17 +109,14 @@ async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📚 *Fonte:* {dados['fonte']}\n\n"
                 "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
             )
-            break
+            await update.message.reply_text(resposta, parse_mode="Markdown")
+            return
 
-    if not resposta:
-        resposta = (
-            "Muito obrigado pela sua pergunta! 🙏\n"
-            "Por enquanto, não encontrei uma resposta automática para esse tema.\n"
-            "Mas você pode buscar diretamente em https://www.jw.org/pt ou https://wol.jw.org/pt/wol/h/r5/lp-t\n\n"
-            "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
-        )
-
-    await update.message.reply_text(resposta, parse_mode="Markdown")
+    # Resposta padrão
+    await update.message.reply_text(
+        "Desculpe, não consegui encontrar uma resposta para isso. Tente enviar um versículo como `João 3:16` ou um tema bíblico como `amor`.",
+        parse_mode="Markdown"
+    )
 
 # Inicializa o bot
 def main():
