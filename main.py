@@ -1,101 +1,93 @@
 import logging
 import os
+import re
+import requests
+from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, filters
 from dotenv import load_dotenv
 
-# Carrega variáveis do arquivo .env (localmente)
+# Carrega variáveis de ambiente
 load_dotenv()
-
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 if not BOT_TOKEN:
     raise ValueError("A variável de ambiente BOT_TOKEN não foi definida!")
 
-# Configuração de log
+# Configuração de logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
 )
 
-# Base de temas bíblicos (exemplo)
-BASE_TEMAS = {
-    "amor": {
-        "versiculo": "1 Coríntios 13:4-7",
-        "texto": "O amor é paciente e bondoso. O amor não é ciumento, não se gaba, não é orgulhoso...",
-        "explicacao": "Mostra como o amor verdadeiro age com bondade e paciência.",
-        "aplicacao": "Aplique sendo paciente com os outros, mesmo em conflitos.",
-        "materia": "https://www.jw.org/pt/biblioteca/revistas/a-despertai-n1-2021-mar-abr/como-desenvolver-o-amor-verdadeiro/",
-        "fonte": "jw.org",
-    },
-    "esperança": {
-        "versiculo": "Apocalipse 21:4",
-        "texto": "Ele enxugará dos seus olhos toda lágrima...",
-        "explicacao": "Deus promete um futuro sem dor nem morte.",
-        "aplicacao": "Mesmo em dificuldades, mantenha a esperança nas promessas de Jeová.",
-        "materia": "https://www.jw.org/pt/biblioteca/revistas/wp20150301/a-esperanca-que-a-biblia-oferece/",
-        "fonte": "jw.org",
-    },
-}
+# Função para buscar o versículo no site wol.jw.org
+def buscar_versiculo(referencia: str):
+    referencia_formatada = referencia.strip().replace(" ", "+")
+    url_busca = f"https://wol.jw.org/pt/wol/lv/r5/lp-t?q={referencia_formatada}"
+
+    try:
+        resposta = requests.get(url_busca)
+        soup = BeautifulSoup(resposta.text, 'html.parser')
+
+        link_resultado = soup.select_one(".resultTitle a")
+        if not link_resultado:
+            return None, None, None, "Texto não encontrado. Verifique a referência."
+
+        url_texto = "https://wol.jw.org" + link_resultado["href"]
+        pagina = requests.get(url_texto)
+        soup_texto = BeautifulSoup(pagina.text, "html.parser")
+
+        texto_biblico = soup_texto.select_one(".b").get_text(strip=True) if soup_texto.select_one(".b") else None
+        explicacao = soup_texto.select_one(".sb").get_text(strip=True) if soup_texto.select_one(".sb") else "Explicação não encontrada."
+        aplicacao = "Pense em como esse texto pode se aplicar na sua vida. Ore a Jeová pedindo sabedoria para pôr isso em prática."
+
+        return texto_biblico, explicacao, aplicacao, url_texto
+    except Exception as e:
+        return None, None, None, f"Erro ao buscar versículo: {e}"
 
 # Comando /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Olá! 👋 Eu sou seu amigo bíblico.\n"
-        "Me envie qualquer pergunta sobre a Bíblia e eu vou tentar te ajudar com base nas publicações das Testemunhas de Jeová."
+        "Envie um versículo como 'João 3:16' ou 'Provérbios 14:16' e eu trarei o texto, uma explicação e como aplicá-lo na vida prática!"
     )
 
-# Responder perguntas
+# Comando para tratar mensagens
 async def responder(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    pergunta = update.message.text.lower()
-    resposta = ""
+    pergunta = update.message.text.strip()
+    if not pergunta:
+        await update.message.reply_text("❗ Por favor, envie uma pergunta ou referência bíblica.")
+        return
 
-    for chave, dados in BASE_TEMAS.items():
-        if chave in pergunta:
-            resposta = (
-                f"📖 *Versículo:* {dados['versiculo']}\n"
-                f"{dados['texto']}\n\n"
-                f"✨ *Explicação:* {dados['explicacao']}\n"
-                f"🧭 *Aplicação:* {dados['aplicacao']}\n\n"
-                f"📘 *Matéria recomendada:* {dados['materia']}\n"
-                f"📚 *Fonte:* {dados['fonte']}\n\n"
-                "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
-            )
-            break
+    texto, explicacao, aplicacao, link = buscar_versiculo(pergunta)
 
-    if not resposta:
+    if texto:
         resposta = (
-            "Muito obrigado pela sua pergunta! 🙏\n"
-            "Ainda não encontrei uma resposta automática para esse tema.\n"
-            "Mas você pode buscar diretamente em:\n"
-            "🔎 https://www.jw.org/pt ou https://wol.jw.org/pt/wol/h/r5/lp-t\n\n"
+            f"📖 *Texto:* {texto}\n\n"
+            f"✨ *Explicação:* {explicacao}\n"
+            f"🧭 *Aplicação:* {aplicacao}\n\n"
+            f"🔗 *Leia mais:* {link}\n\n"
             "🙏 Você pode encontrar mais artigos como esse em: https://www.jw.org/pt"
         )
-
-    if resposta.strip():
-        await update.message.reply_text(resposta, parse_mode="Markdown")
     else:
-        await update.message.reply_text("Desculpe, não encontrei resposta para isso.")
+        resposta = (
+            f"❗ {link}\n\n"
+            "Você pode buscar diretamente em: https://wol.jw.org/pt/wol/h/r5/lp-t"
+        )
 
-# Inicialização principal
+    await update.message.reply_text(resposta, parse_mode="Markdown")
+
+# Função principal
 def main():
-    PORT = int(os.environ.get("PORT", 8443))
-    HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")  # adicione essa variável no Render
-
-    if not HOSTNAME:
-        raise ValueError("A variável de ambiente RENDER_EXTERNAL_HOSTNAME não foi definida!")
-
     application = Application.builder().token(BOT_TOKEN).build()
+
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, responder))
 
-    # Inicia via webhook (recomendado no Render)
-    application.run_webhook(
-        listen="0.0.0.0",
-        port=PORT,
-        url_path=BOT_TOKEN,
-        webhook_url=f"https://{HOSTNAME}/{BOT_TOKEN}",
-    )
+    print("🤖 Bot rodando...")
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
+
 
